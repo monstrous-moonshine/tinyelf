@@ -4,8 +4,8 @@ all: patch hello
 
 patch: patch.c
 
-hello: hello.s
-	$(CC) -static -nostdlib $^ -o $@
+hello: hello.c
+	$(CC) -static -nostdlib -Os $^ -o $@
 
 clean:
 	$(RM) patch hello
