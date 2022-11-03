@@ -14,7 +14,7 @@ static long read_file(const char *name, void **out) {
         fclose(fp);
         return -1;
     }
-    int nread = fread(buf, 1, size, fp);
+    long nread = fread(buf, 1, size, fp);
     if (nread != size) {
         fclose(fp);
         free(buf);
@@ -28,7 +28,7 @@ static long read_file(const char *name, void **out) {
 static long write_file(const char *name, void *buf, long size) {
     FILE *fp = fopen(name, "w");
     if (!fp) return -1;
-    int nwrite = fwrite(buf, 1, size, fp);
+    long nwrite = fwrite(buf, 1, size, fp);
     fclose(fp);
     return nwrite;
 }
@@ -38,7 +38,7 @@ static long patch_segment(unsigned char *elf) {
     Elf64_Phdr *const phdr = (Elf64_Phdr *)&elf[ehdr->e_phoff];
     int text_idx = -1;
     for (int i = 0; i < ehdr->e_phnum; i++) {
-        if (phdr[i].p_flags & PF_X) {
+        if (phdr[i].p_type == PT_LOAD && (phdr[i].p_flags & PF_X)) {
             text_idx = i;
             break;
         }
@@ -83,6 +83,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     long patched_size  = patch_segment(in);
+    if (patched_size < 0)
+        return 1;
     long nwr = write_file(argv[1], in, patched_size);
     if (nwr != patched_size) {
         fprintf(stderr, "Error writing '%s'\n", argv[1]);
