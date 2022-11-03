@@ -52,15 +52,16 @@ static long patch_segment(unsigned char *elf) {
     }
     ehdr->e_phnum = 1;
 
-    const int text_off_new = 0x78;
-    Elf64_Off text_off_old = phdr[0].p_offset;
+    const Elf64_Off base_off     = 0x10000;
+    const Elf64_Off text_off_new = 0x78;
+    const Elf64_Off text_off_old = phdr[0].p_offset;
     phdr[0].p_align = 8;
     phdr[0].p_offset = text_off_new;
-    phdr[0].p_vaddr = 0x400000 + text_off_new;
-    phdr[0].p_paddr = 0x400000 + text_off_new;
+    phdr[0].p_vaddr = base_off + text_off_new;
+    phdr[0].p_paddr = base_off + text_off_new;
     memcpy(&elf[text_off_new], &elf[text_off_old], phdr[0].p_filesz);
 
-    ehdr->e_entry = 0x400000 + text_off_new;
+    ehdr->e_entry = base_off + text_off_new;
 
     ehdr->e_shentsize = 0;
     ehdr->e_shoff = 0;
