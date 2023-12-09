@@ -44,31 +44,38 @@ static long patch_segment(unsigned char *elf) {
         }
     }
     if (text_idx < 0) {
-        fprintf(stderr, "Warning: No executable segment found\n");
+        fprintf(stderr, "Error: No executable segment found\n");
+        return -1;
+    }
+    Elf64_Phdr *p_text = &phdr[text_idx];
+    if (ehdr->e_entry < p_text->p_vaddr || ehdr->e_entry >= p_text->p_vaddr + p_text->p_memsz) {
+        fprintf(stderr, "Error: Entry point not in executable segment\n");
         return -1;
     }
     if (text_idx != 0) {
-        memcpy(&phdr[0], &phdr[text_idx], ehdr->e_phentsize);
+        memcpy(&phdr[0], p_text, ehdr->e_phentsize);
+        p_text = &phdr[0];
     }
     ehdr->e_phnum = 1;
 
+    /* /proc/sys/vm/mmap_min_addr = 0x10000 */
     const Elf64_Off base_off     = 0x10000;
-    const Elf64_Off text_off_new = 0x78;
-    const Elf64_Off text_off_old = phdr[0].p_offset;
-    phdr[0].p_align = 8;
-    phdr[0].p_offset = text_off_new;
-    phdr[0].p_vaddr = base_off + text_off_new;
-    phdr[0].p_paddr = base_off + text_off_new;
-    memcpy(&elf[text_off_new], &elf[text_off_old], phdr[0].p_filesz);
+    const Elf64_Off text_off_new = sizeof *ehdr + sizeof *phdr;
+    const Elf64_Off text_off_old = p_text->p_offset;
+    const Elf64_Off entry_off    = ehdr->e_entry - p_text->p_vaddr;
+    p_text->p_align = 1;
+    p_text->p_offset = text_off_new;
+    p_text->p_vaddr = base_off + text_off_new;
+    p_text->p_paddr = base_off + text_off_new;
+    memmove(&elf[text_off_new], &elf[text_off_old], p_text->p_filesz);
 
-    ehdr->e_entry = base_off + text_off_new;
-
+    ehdr->e_entry = p_text->p_vaddr + entry_off;
     ehdr->e_shentsize = 0;
     ehdr->e_shoff = 0;
     ehdr->e_shnum = 0;
     ehdr->e_shstrndx = SHN_UNDEF;
 
-    return text_off_new + phdr[0].p_filesz;
+    return text_off_new + p_text->p_filesz;
 }
 
 int main(int argc, char *argv[]) {

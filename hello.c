@@ -1,36 +1,31 @@
+#include <sys/syscall.h>
 #include <sys/types.h>
-#include <syscall.h>
-#include <unistd.h>
 
-#define _noreturn_ __attribute__((noreturn))
-#define _section_(x) __attribute__((section(x)))
-#define _aligned_(x) __attribute__((aligned(x)))
+#define STDOUT_FILENO 1
+#define _tdata_ __attribute__((section(".text#"), aligned(1)))
 
-static inline ssize_t my_write(int fd, const void *buf, size_t size) {
+static inline ssize_t write(int fd, const void *buf, size_t count) {
     ssize_t ret;
     asm volatile (
         "syscall"
         : "=a"(ret)
-        : "a"(__NR_write), "D"(fd), "S"(buf), "d"(size)
+        : "a"(__NR_write), "D"(fd), "S"(buf), "d"(count)
         : "rcx", "r11", "memory"
     );
     return ret;
 }
 
-_noreturn_ static inline void my_exit(int status) {
-    asm volatile (
-        "syscall"
-        :
-        : "a"(__NR_exit), "D"(status)
-        :
-    );
-    __builtin_unreachable();
+#if 0
+static size_t strlen(const char *s) {
+    size_t cnt = 0;
+    while (*s++) cnt++;
+    return cnt;
 }
+#endif
 
-_noreturn_ void _start() {
-    _section_(".text#") _aligned_(1)
-    static const char message[] = "Hello, world!\n";
-
-    my_write(STDOUT_FILENO, message, sizeof message - 1);
-    my_exit(0);
+int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+    static _tdata_ const char message[] = "Hello, world!\n";
+    write(STDOUT_FILENO, message, sizeof message - 1);
 }
