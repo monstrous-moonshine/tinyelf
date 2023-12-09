@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     // Keep it in the .text section along with the code. Look at the
-    // generated assembly (make hello.S) to understand the # at the
+    // generated assembly (make hello.s) to understand the # at the
     // end.
     static _tdata_ const char message[] = "Hello, world!\n";
     // We don't need to write the terminating NULL, so subtract 1.
